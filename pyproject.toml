@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "jera"
+version = "0.0.0a"
+description = "..."
+authors = ["INSPXRXD <inspxrxd@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/INSPXRXD/jera"
+repository = "https://github.com/INSPXRXD/jera"
+documentation = "https://github.com/INSPXRXD/jera"
+include = []
+keywords = ["Domain Driven Design"]
+packages = [
+    { include = "jera" },
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/INSPXRXD/jera/issues"
+"Documentation" = "https://github.com/INSPXRXD/jera"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+pytest = "^8"
+
+[build-system]
+requires = ["poetry>=1.0"]
+build-backend = "poetry.core.masonry.api"
