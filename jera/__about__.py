@@ -120,7 +120,7 @@ version = Version.from_str(__version__)
 """Current version of the project. 
 
 major : int
------------
+-----
 Indicates a major release of the software, usually involving 
 significant changes or new features. 
 
@@ -128,18 +128,18 @@ Note that changes in the major version may be incompatible
 with previous versions. 
 
 minor : int
------------
+-----
 Indicates a less significant release, usually including minor 
 improvements or new features that are compatible with previous 
 versions.
 
 serial : int
-------------
+------
 Used to indicate the sequential release number within a current 
 development stage. 
 
 stage : Optional[Literal["a", "b", "rc"]], default None
--------------------------------------------------------
+-----
 Indicates the development stage of the software version. 
 
 Three stages are used:

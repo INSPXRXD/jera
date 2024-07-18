@@ -62,7 +62,7 @@ See `THAWED_DEFAULTS` for the default list of all methods where
 changes to the class or its instances occur.
 """
 
-THAWED_DEFAULTS: typing.Final[typing.AbstractSet[str]] = {
+THAWED_DEFAULTS: typing.Final[typing.FrozenSet[str]] = frozenset({
     "__frozen_setattr__",
     "__frozen_delattr__",
     # Type level
@@ -71,7 +71,7 @@ THAWED_DEFAULTS: typing.Final[typing.AbstractSet[str]] = {
     "freeze",
     # Instance level
     "__init__",
-}
+})
 """
 Attributes or names of places, such as module name, where the 
 object can be modified. By default, the location of the call is 
@@ -133,8 +133,22 @@ def __frozen_delattr__(ref: typing.Any, item: typing.Any) -> None:
 
 
 def _freeze_cls_attrs(
-    attrs: typing.Dict[str, typing.Any], /,
+    attrs: typing.Dict[str, typing.Any],
+    *,
+    frozen_flag: typing.Optional[bool] = None,
+    merge_thawed: typing.Optional[
+        typing.AbstractSet[str]
+    ] = None,
 ) -> typing.Dict[str, typing.Any]:
+    if frozen_flag is not None:
+        attrs[FROZEN_FLAG] = frozen_flag
+
+    thawed = set() | THAWED_DEFAULTS
+    if merge_thawed is not None:
+        thawed |= merge_thawed
+
+    attrs[THAWED_ATTRS] = thawed
+
     attrs["__setattr__"] = attrs["__setitem__"] = __frozen_setattr__
     attrs["__delattr__"] = attrs["__delitem__"] = __frozen_delattr__
     return attrs
@@ -182,7 +196,7 @@ class FrozenMeta(type):
     __delattr__ = __delitem__ = __frozen_delattr__
 
     def __new__(
-        mcs: typing.Type[ThawableMeta],
+        mcs: typing.Type[FrozenMeta],
         name: str,
         bases: typing.Tuple[typing.Type[typing.Any], ...],
         attrs: typing.Dict[str, typing.Any],
@@ -204,7 +218,10 @@ class FrozenMeta(type):
             mcs,
             name,
             bases,
-            _freeze_cls_attrs(attrs),
+            _freeze_cls_attrs(
+                attrs,
+                frozen_flag=True,
+            ),
         )
         return frozen
 
@@ -245,16 +262,15 @@ class ThawableMeta(type):
                 f"but {type(thawed)}/{thawed} received."
             )
 
-        thawed |= THAWED_DEFAULTS
-
-        attrs[THAWED_ATTRS] = thawed
-        attrs[FROZEN_FLAG] = frozen
-
         thawable = super().__new__(
             mcs,
             name,
             bases,
-            _freeze_cls_attrs(attrs),
+            _freeze_cls_attrs(
+                attrs,
+                frozen_flag=frozen,
+                merge_thawed=thawed,
+            ),
         )
         return thawable
 
