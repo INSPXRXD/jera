@@ -38,6 +38,7 @@ __all__: typing.Sequcence[str] = (
     "THAWED_DEFAULTS",
 )
 
+import inspect
 import typing
 import sys
 
@@ -108,7 +109,8 @@ def __frozen_setattr__(
         # the metaclass are called. We cannot apply
         # `object.__dunder_method__` to the metaclass, so we
         # refer to `type`.
-        type.__setattr__(ref, key, value)
+        if inspect.isclass(ref):
+            type.__setattr__(ref, key, value)
 
 
 def __frozen_delattr__(ref: typing.Any, item: typing.Any) -> None:
@@ -129,7 +131,8 @@ def __frozen_delattr__(ref: typing.Any, item: typing.Any) -> None:
         # the metaclass are called. We cannot apply
         # `object.__dunder_method__` to the metaclass, so we
         # refer to `type`.
-        type.__delattr__(ref, item)
+        if inspect.isclass(ref):
+            type.__delattr__(ref, item)
 
 
 def _freeze_cls_attrs(
