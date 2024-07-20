@@ -42,6 +42,8 @@ import inspect
 import typing
 import sys
 
+from jera import errors
+
 FROZEN_FLAG: typing.Final[str] = sys.intern("__frozen__")
 """
 A constant that defines the attribute name serving as a flag 
@@ -157,7 +159,7 @@ def _freeze_cls_attrs(
     return attrs
 
 
-class FrozenError(Exception):
+class FrozenError(errors.JeraError):
     """The base class for all exceptions related to this module."""
     pass
 

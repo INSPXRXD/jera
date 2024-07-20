@@ -21,18 +21,53 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
-__all__: typing.Sequence[str] = ("BuildingBlock",)
+__all__: typing.Sequence[str] = (
+    "UNDEFINED",
+    "UndefinedOr",
+)
 
 import typing
 
+import typing_extensions
 
-class BuildingBlock:
-    """
-    A base class for domain patterns, where each one represents
-    a building block in its own right.
+_SelfT = typing.TypeVar("_SelfT")
 
-    In Domain-Driven Design, building blocks are a fundamental
-    concept that helps construct the business layer of your
-    application.
-    """
-    pass
+
+def __new__(_: typing.Type[_SelfT]) -> _SelfT:
+    raise TypeError(f"Cannot create multiple instances of NothingType.")
+
+
+class UndefinedType:
+    __slots__: typing.Sequence[str] = ()
+
+    def __str__(self) -> str:
+        return "NOTHING"
+
+    def __repr__(self) -> str:
+        return "<NOTHING>"
+
+    def __reduce__(self) -> str:
+        return "NOTHING"
+
+    def __getstate__(self) -> typing.Any:
+        return False
+
+    def __bool__(self) -> typing.Literal[False]:
+        return False
+
+    def __copy__(self) -> typing_extensions.Self:
+        return self
+
+    def __deepcopy__(
+        self, memo: typing.MutableMapping[int, typing.Any]
+    ) -> typing_extensions.Self:
+        memo[id(self)] = self
+        return self
+
+
+UNDEFINED = UndefinedType()
+UndefinedType.__new__ = __new__
+del __new__
+
+_T = typing.TypeVar("_T")
+UndefinedOr = typing.Union[_T, UndefinedType]

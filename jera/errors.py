@@ -21,18 +21,10 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
-__all__: typing.Sequence[str] = ("BuildingBlock",)
+__all__: typing.Sequence[str] = ("JeraError",)
 
 import typing
 
 
-class BuildingBlock:
-    """
-    A base class for domain patterns, where each one represents
-    a building block in its own right.
-
-    In Domain-Driven Design, building blocks are a fundamental
-    concept that helps construct the business layer of your
-    application.
-    """
+class JeraError(Exception):
     pass
