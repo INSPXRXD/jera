@@ -28,23 +28,19 @@ the second approach makes the object completely immutable.
 from __future__ import annotations
 
 __all__: typing.Sequcence[str] = (
-    "FrozenMeta",
-    "ThawableMeta",
     "Frozen",
     "Thawable",
     "FrozenObjectError",
-    "FROZEN_FLAG",
-    "THAWED_ATTRS",
-    "THAWED_DEFAULTS",
 )
 
 import inspect
 import typing
 import sys
+import warnings
 
 from jera import errors
 
-FROZEN_FLAG: typing.Final[str] = sys.intern("__frozen__")
+FROZEN: typing.Final[str] = sys.intern("__frozen__")
 """
 A constant that defines the attribute name serving as a flag 
 indicating whether the object is currently frozen.
@@ -53,10 +49,10 @@ Note that if the object is frozen, it will not be permissible
 to modify it at either the class level or the instance level.
 
 You can override methods or places where the class may be 
-modified in the `__thawed_attrs__` attribute (see `THAWED_ATTRS`).
+modified in the `__thawed__` attribute (see `THAWED_ATTRS`).
 """
 
-THAWED_ATTRS: typing.Final[str] = sys.intern("__thawed_attrs__")
+THAWED: typing.Final[str] = sys.intern("__thawed__")
 """
 A constant defining the name for a set containing method names 
 or other places where the object is available for modification.
@@ -87,10 +83,33 @@ def __frozen_setattr__(
     key: typing.Any,
     value: typing.Any,
 ) -> None:
+    thawed = getattr(ref, THAWED, ())
+    try:
+        f_code = sys._getframe().f_back.f_code
+    except AttributeError as exc:
+        raise ValueError(
+            "Unable to retrieve the previous frame from the "
+            "stack. This technology may not be supported in "
+            "your Python implementation."
+        ) from exc
+
+    module_name = f_code.co_filename.split("\\")[-1].split(".")[0]
+    if hasattr(ref, module_name) and module_name in thawed:
+        warnings.warn(
+            f"The object {ref!r} has an attribute that "
+            f"matches the thawed module name {module_name!r}.\n"
+            f"Name collision may lead to unexpected "
+            f"unfreezing of object attributes."
+        )
+
     if (
         ref.__frozen__
-        and sys._getframe().f_back.f_code.co_name
-        not in getattr(ref, THAWED_ATTRS, ())
+        and (
+            # The name of the caller or the name of the module
+            # where __setattr__() is being invoked.
+            f_code.co_name not in thawed
+            and module_name not in thawed
+        )
     ):
         raise FrozenObjectError(ref)
 
@@ -116,10 +135,33 @@ def __frozen_setattr__(
 
 
 def __frozen_delattr__(ref: typing.Any, item: typing.Any) -> None:
+    thawed = getattr(ref, THAWED, ())
+    try:
+        f_code = sys._getframe().f_back.f_code
+    except AttributeError as exc:
+        raise ValueError(
+            "Unable to retrieve the previous frame from the "
+            "stack. This technology may not be supported in "
+            "your Python implementation."
+        ) from exc
+
+    module_name = f_code.co_filename.split("\\")[-1].split(".")[0]
+    if hasattr(ref, module_name) and module_name in thawed:
+        warnings.warn(
+            f"The object {ref!r} has an attribute that "
+            f"matches the thawed module name {module_name!r}.\n"
+            f"Name collision may lead to unexpected "
+            f"unfreezing of object attributes."
+        )
+
     if (
         ref.__frozen__
-        and sys._getframe().f_back.f_code.co_name
-        not in getattr(ref, THAWED_ATTRS, ())
+        and (
+            # The name of the caller or the name of the module
+            # where __setattr__() is being invoked.
+            f_code.co_name not in thawed
+            and module_name not in thawed
+        )
     ):
         raise FrozenObjectError(ref)
 
@@ -140,19 +182,19 @@ def __frozen_delattr__(ref: typing.Any, item: typing.Any) -> None:
 def _freeze_cls_attrs(
     attrs: typing.Dict[str, typing.Any],
     *,
-    frozen_flag: typing.Optional[bool] = None,
+    frozen: typing.Optional[bool] = None,
     merge_thawed: typing.Optional[
         typing.AbstractSet[str]
     ] = None,
 ) -> typing.Dict[str, typing.Any]:
-    if frozen_flag is not None:
-        attrs[FROZEN_FLAG] = frozen_flag
+    if frozen is not None:
+        attrs[FROZEN] = frozen
 
     thawed = set() | THAWED_DEFAULTS
     if merge_thawed is not None:
         thawed |= merge_thawed
 
-    attrs[THAWED_ATTRS] = thawed
+    attrs[THAWED] = thawed
 
     attrs["__setattr__"] = attrs["__setitem__"] = __frozen_setattr__
     attrs["__delattr__"] = attrs["__delitem__"] = __frozen_delattr__
@@ -206,7 +248,7 @@ class FrozenMeta(type):
         bases: typing.Tuple[typing.Type[typing.Any], ...],
         attrs: typing.Dict[str, typing.Any],
     ) -> typing.Any:
-        frozen = attrs.pop(FROZEN_FLAG, True)
+        frozen = attrs.pop(FROZEN, True)
         if not isinstance(frozen, bool):
             raise ValueError(
                 f"__frozen__ expected a boolean value, "
@@ -225,7 +267,7 @@ class FrozenMeta(type):
             bases,
             _freeze_cls_attrs(
                 attrs,
-                frozen_flag=True,
+                frozen=True,
             ),
         )
         return frozen
@@ -233,7 +275,7 @@ class FrozenMeta(type):
 
 class ThawableMeta(type):
     __frozen__: bool
-    __thawed_attrs__: typing.MutableSet[str]
+    __thawed__: typing.MutableSet[str]
 
     # We remove the ability to modify the object at the class level.
     # These dunder methods are triggered when attempting to add or
@@ -253,17 +295,17 @@ class ThawableMeta(type):
         bases: typing.Tuple[typing.Type[typing.Any], ...],
         attrs: typing.Dict[str, typing.Any],
     ) -> typing.Any:
-        frozen = attrs.pop(FROZEN_FLAG, True)
+        frozen = attrs.pop(FROZEN, True)
         if not isinstance(frozen, bool):
             raise ValueError(
                 f"__frozen__ expected a boolean value, "
                 f"but {type(frozen)}/{frozen} received."
             )
 
-        thawed = attrs.pop(THAWED_ATTRS, set())
+        thawed = attrs.pop(THAWED, set())
         if not isinstance(thawed, set):
             raise ValueError(
-                f"__thawed_attrs__ expected a set value, "
+                f"__thawed__ expected a set value, "
                 f"but {type(thawed)}/{thawed} received."
             )
 
@@ -273,7 +315,7 @@ class ThawableMeta(type):
             bases,
             _freeze_cls_attrs(
                 attrs,
-                frozen_flag=frozen,
+                frozen=frozen,
                 merge_thawed=thawed,
             ),
         )
@@ -358,7 +400,7 @@ class ThawableMeta(type):
                         f"cls {cls.__name__!r}."
                     ) from None
 
-        cls.__thawed_attrs__ |= attrs
+        cls.__thawed__ |= attrs
 
     def is_frozen(cls) -> bool:
         """
@@ -367,11 +409,11 @@ class ThawableMeta(type):
         """
         frozen = typing.cast(
             typing.Optional[bool],
-            getattr(cls, FROZEN_FLAG, None),
+            getattr(cls, FROZEN, None),
         )
         if frozen is None:
             raise AttributeError(
-                f"Missing {FROZEN_FLAG!r} in "
+                f"Missing {FROZEN!r} in "
                 f"{cls.__name__!r} class."
             ) from None
 
@@ -404,7 +446,7 @@ class Thawable(metaclass=ThawableMeta):
     it is frozen or not.
     By default, it is set to `builtins.True`.
 
-    __thawed_attrs__ : set
+    __thawed__ : set
     ----------------
     A parameter that defines the attributes that will be unfrozen
     and therefore can change the state of the current instance of

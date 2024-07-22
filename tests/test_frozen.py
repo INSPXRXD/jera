@@ -21,6 +21,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
+import dataclasses
 import operator
 import re
 import typing
@@ -123,6 +124,21 @@ class TestFrozen:
         ):
             obj_mutator(new_frozen_instance)
 
+    # FIXME: ?
+    # def test_frozen_compatible_with_modules(self) -> None:
+    #     @dataclasses.dataclass
+    #     class _FrozenClass(FrozenClass):
+    #         __thawed__: typing.ClassVar[
+    #             typing.AbstractSet[str]
+    #         ] = {"dataclasses"}
+    #
+    #         a: int
+    #         b: str
+    #
+    #     f = _FrozenClass(1, "2")
+    #     assert f.a == 1
+    #     assert f.b == "2"
+
 
 class TestThawable:
     def test_invalid_frozen_flag(self) -> None:
@@ -142,12 +158,12 @@ class TestThawable:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                f"__thawed_attrs__ expected a set value, "
+                f"__thawed__ expected a set value, "
                 f"but {type(thawed_attrs)}/{thawed_attrs} received."
             ),
         ):
             class InvalidThawedAttrs(frozen.Thawable):
-                __thawed_attrs__ = thawed_attrs
+                __thawed__ = thawed_attrs
 
     def test_thawable_instance_is_frozen_by_default(
         self, new_thawable_instance: ThawableClass,
@@ -165,7 +181,7 @@ class TestThawable:
 
     def test_merge_thawed_attrs_on_thawable_instance(self) -> None:
         class _ThawableClass(frozen.Thawable):
-            __thawed_attrs__ = {"change_value"}
+            __thawed__ = {"change_value"}
             def __init__(self) -> None:
                 self.value = 123
             def change_value(self) -> None:
@@ -371,3 +387,23 @@ class TestThawable:
 
         assert _ThawableClass.__frozen__
         assert _ThawableClass.is_frozen()
+
+    def test_thawable_compatible_with_modules(self) -> None:
+        @dataclasses.dataclass
+        class _ThawableClass(frozen.Thawable):
+            __thawed__: typing.ClassVar[
+                typing.AbstractSet[str]
+            ] = {"dataclasses"}
+
+            a: int
+            b: str
+
+        t = _ThawableClass(1, "2")
+        assert t.a == 1
+        assert t.b == "2"
+
+        with pytest.raises(frozen.FrozenObjectError):
+            @dataclasses.dataclass
+            class _InvalidThawableDataclass(frozen.Thawable):
+                a: int
+                b: str
