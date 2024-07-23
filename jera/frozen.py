@@ -417,7 +417,7 @@ class ThawableMeta(type):
                 f"{cls.__name__!r} class."
             ) from None
 
-        return cls.__frozen__
+        return frozen
 
 
 class Frozen(metaclass=FrozenMeta):
