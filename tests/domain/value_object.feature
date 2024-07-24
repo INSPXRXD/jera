@@ -17,6 +17,7 @@
 # CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.Feature: ValueObject
+Feature: ValueObject
   """
   A value object is primarily an element of a model defined by its attributes and lacking
   individual existence. These objects are created in a program to represent those
@@ -27,12 +28,12 @@
   - A value object can represent a collection of other objects.
   - Value objects can reference entities.
   - Value objects are often passed as parameters in messages between objects. They are
-  frequently temporary, created for a specific operation and then destroyed.
+    frequently temporary, created for a specific operation and then destroyed.
   - Value objects can be used as attributes of entities (and other values). For example,
-  a person as a whole can be represented as an individual entity, but their name would be
-  a value object.
+    a person as a whole can be represented as an individual entity, but their name would be
+    a value object.
   - The attributes that collectively form a value object should be a single conceptual
-  whole (Whole Value Pattern).
+    whole (Whole Value Pattern).
 
   Methods within value objects
   -------
@@ -53,7 +54,7 @@
   - High cost of creating and destroying the object.
   - The danger of replacement instead of modification when grouping objects.
   - Insignificant concurrent use or a complete rejection of it to improve object grouping
-  and for some other technical reasons.
+    and for some other technical reasons.
 
   Are all attributes value objects?
   -------
