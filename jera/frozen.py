@@ -27,7 +27,7 @@ the second approach makes the object completely immutable.
 """
 from __future__ import annotations
 
-__all__: typing.Sequcence[str] = (
+__all__: typing.Sequence[str] = (
     "Frozen",
     "Thawable",
     "FrozenObjectError",
